@@ -255,9 +255,10 @@ def planning(config_path):
 
 		triples_map_list = mapping_parser(config[dataset_i]["mapping"])
 		groups_mapping = grouping_mappings(triples_map_list)
+		parent_child = join_grouping(triples_map_list)
 		i = 0
 		for group_mapping in groups_mapping:
-			update_mapping(config[dataset_i]["mapping"],config["datasets"]["output_folder"],i,groups_mapping[group_mapping],triples_map_list)
+			update_mapping(config[dataset_i]["mapping"],config["datasets"]["output_folder"],i,groups_mapping[group_mapping], parent_child,triples_map_list)
 			i += 1 
 
 		print("Successfully semantified {}.\n".format(config[dataset_i]["name"]))

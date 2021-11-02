@@ -6,6 +6,20 @@ import os
 global prefixes
 prefixes = {}
 
+def join_grouping(triples_map_list):
+    parent_child = {}
+    for triples_map in triples_map_list:
+        for predicate_object in triples_map.predicate_object_maps_list:
+            if "parent triples map" in predicate_object.object_map.mapping_type:
+                if None not in predicate_object.object_map.child and None not in predicate_object.object_map.parent :
+                    for tp in triples_map_list:
+                        if tp.triples_map_id == predicate_object.object_map.value:
+                            if tp.triples_map_id not in parent_child:
+                                parent_child[tp.triples_map_id] = [triples_map.triples_map_id]
+                            else:
+                                parent_child[tp.triples_map_id].append
+    return parent_child
+
 def string_separetion(string):
     if ("{" in string) and ("[" in string):
         prefix = string.split("{")[0]
@@ -27,16 +41,13 @@ def grouping_mappings(triples_map_list):
             grouping[triples_map.data_source].append(triples_map.triples_map_id)
     return grouping
 
-def update_mapping(original, output_folder, number, mapping_group, triples_map_list):
+def update_mapping(original, output_folder, number, mapping_group, parent_child, triples_map_list):
     mapping = ""
-    parent_triples_maps = {}
+    child_triples_maps = {}
     for tm in mapping_group:
         for triples_map in triples_map_list:
             if tm == triples_map.triples_map_id:
-                if "#" in triples_map.triples_map_id:
-                    mapping += "<" + triples_map.triples_map_id.split("#")[1] + ">\n"
-                else: 
-                    mapping += "<" + triples_map.triples_map_id + ">\n"
+                mapping += "<" + triples_map.triples_map_id + ">\n"
                 mapping += "    a rr:TriplesMap;\n"
                 mapping += "    rml:logicalSource [ rml:source \"" + triples_map.data_source +"\";\n"
                 if str(triples_map.file_format).lower() == "csv" and triples_map.query == "None": 
@@ -58,68 +69,101 @@ def update_mapping(original, output_folder, number, mapping_group, triples_map_l
                 mapping += "    ];\n"
 
                 for predicate_object in triples_map.predicate_object_maps_list:
-                    mapping += "    rr:predicateObjectMap [\n"
-                    if "constant" in predicate_object.predicate_map.mapping_type :
-                        prefix, url, value = prefix_extraction(original, predicate_object.predicate_map.value)
-                        mapping += "        rr:predicate " + prefix + ":" + value + ";\n"
-                    elif "constant shortcut" in predicate_object.predicate_map.mapping_type:
-                        prefix, url, value = prefix_extraction(original, predicate_object.predicate_map.value)
-                        mapping += "        rr:predicate " + prefix + ":" + value + ";\n"
-                    elif "template" in predicate_object.predicate_map.mapping_type:
-                        mapping += "        rr:predicateMap[\n"
-                        mapping += "            rr:template \"" + predicate_object.predicate_map.value + "\"\n"  
-                        mapping += "        ];\n"
-                    elif "reference" in predicate_object.predicate_map.mapping_type:
-                        mapping += "        rr:predicateMap[\n"
-                        mapping += "            rml:reference \"" + predicate_object.predicate_map.value + "\"\n" 
-                        mapping += "        ];\n"
+                    if "parent triples map" not in predicate_object.object_map.mapping_type:
+                        mapping += "    rr:predicateObjectMap [\n"
+                        if "constant" in predicate_object.predicate_map.mapping_type :
+                            prefix, url, value = prefix_extraction(original, predicate_object.predicate_map.value)
+                            mapping += "        rr:predicate " + prefix + ":" + value + ";\n"
+                        elif "constant shortcut" in predicate_object.predicate_map.mapping_type:
+                            prefix, url, value = prefix_extraction(original, predicate_object.predicate_map.value)
+                            mapping += "        rr:predicate " + prefix + ":" + value + ";\n"
+                        elif "template" in predicate_object.predicate_map.mapping_type:
+                            mapping += "        rr:predicateMap[\n"
+                            mapping += "            rr:template \"" + predicate_object.predicate_map.value + "\"\n"  
+                            mapping += "        ];\n"
+                        elif "reference" in predicate_object.predicate_map.mapping_type:
+                            mapping += "        rr:predicateMap[\n"
+                            mapping += "            rml:reference \"" + predicate_object.predicate_map.value + "\"\n" 
+                            mapping += "        ];\n"
 
-                    mapping += "        rr:objectMap "
-                    if "constant" in predicate_object.object_map.mapping_type:
-                        mapping += "[\n"
-                        mapping += "        rr:constant \"" + predicate_object.object_map.value + "\"\n"
-                        mapping += "        ]\n"
-                    elif "template" in predicate_object.object_map.mapping_type:
-                        mapping += "[\n"
-                        mapping += "        rr:template  \"" + predicate_object.object_map.value + "\"\n"
-                        mapping += "        ]\n"
-                    elif "reference" == predicate_object.object_map.mapping_type:
-                        mapping += "[\n"
-                        mapping += "        rml:reference \"" + predicate_object.object_map.value + "\"\n"
-                        mapping += "        ]\n"
-                    elif "parent triples map" in predicate_object.object_map.mapping_type:
-                        mapping += "[\n"
-                        mapping += "        rr:parentTriplesMap <" + predicate_object.object_map.value + ">\n"
-                        if (predicate_object.object_map.child is not None) and (predicate_object.object_map.parent is not None):
-                            if predicate_object.object_map.value not in parent_triples_maps:
-                                parent_triples_maps[predicate_object.object_map.value] = ""
-                            mapping = mapping[:-1]
-                            for i in range(len(predicate_object.object_map.child)):
-                                mapping += ";\n"
-                                mapping += "        rr:joinCondition [\n"
-                                mapping += "            rr:child \"" + predicate_object.object_map.child[i] + "\";\n"
-                                mapping += "            rr:parent \"" + predicate_object.object_map.parent[i] + "\";\n"
-                                mapping += "        ]\n"
-                        mapping += "        ]\n"
-                    elif "constant shortcut" in predicate_object.object_map.mapping_type:
-                        mapping += "[\n"
-                        mapping += "        rr:constant \"" + predicate_object.object_map.value + "\"\n"
-                        mapping += "        ]\n"
-                    mapping += "    ];\n"
+                        mapping += "        rr:objectMap "
+                        if "constant" in predicate_object.object_map.mapping_type:
+                            mapping += "[\n"
+                            mapping += "        rr:constant \"" + predicate_object.object_map.value + "\"\n"
+                            mapping += "        ]\n"
+                        elif "template" in predicate_object.object_map.mapping_type:
+                            mapping += "[\n"
+                            mapping += "        rr:template  \"" + predicate_object.object_map.value + "\"\n"
+                            mapping += "        ]\n"
+                        elif "reference" == predicate_object.object_map.mapping_type:
+                            mapping += "[\n"
+                            mapping += "        rml:reference \"" + predicate_object.object_map.value + "\"\n"
+                            mapping += "        ]\n"
+                        elif "constant shortcut" in predicate_object.object_map.mapping_type:
+                            mapping += "[\n"
+                            mapping += "        rr:constant \"" + predicate_object.object_map.value + "\"\n"
+                            mapping += "        ]\n"
+                        mapping += "    ];\n"
+                    else:
+                        if None in predicate_object.object_map.child and None in predicate_object.object_map.parent:
+                            mapping += "    rr:predicateObjectMap [\n"
+                            prefix, url, value = prefix_extraction(original, predicate_object.predicate_map.value)
+                            mapping += "        rr:predicate " + prefix + ":" + value + ";\n"
+                            mapping += "    rr:objectMap [\n"
+                            mapping += "        rr:parentTriplesMap <" + predicate_object.object_map.value + ">\n"
+                            mapping += "    ];\n"
+                            mapping += "    ];\n"
+                        else:
+                            for tm in triples_map_list:
+                                if tm.triples_map_id == predicate_object.object_map.value:
+                                    if tm.data_source == triples_map.data_source:
+                                        mapping += "    rr:predicateObjectMap [\n"
+                                        prefix, url, value = prefix_extraction(original, predicate_object.predicate_map.value)
+                                        mapping += "        rr:predicate " + prefix + ":" + value + ";\n"
+                                        mapping += "        rr:objectMap [\n"
+                                        mapping += "        rr:parentTriplesMap <" + predicate_object.object_map.value + ">\n"
+                                        mapping = mapping[:-1]
+                                        for i in range(len(predicate_object.object_map.child)):
+                                            mapping += ";\n"
+                                            mapping += "        rr:joinCondition [\n"
+                                            mapping += "            rr:child \"" + predicate_object.object_map.child[i] + "\";\n"
+                                            mapping += "            rr:parent \"" + predicate_object.object_map.parent[i] + "\";\n"
+                                            mapping += "        ]\n"
+                                        mapping += "    ];\n"
         mapping = mapping[:-2]
         mapping += ".\n\n"
 
-        if parent_triples_maps:
-            for triples_map in triples_map_list:
-                if triples_map.triples_map_id in parent_triples_maps and triples_map.triples_map_id not in mapping_group:
-                    mapping += "<" + triples_map.triples_map_id + ">\n"
-                    mapping += "    a rr:TriplesMap;\n"
-                    mapping += "    rml:logicalSource [ rml:source \"" + triples_map.data_source +"\";\n"
-                    mapping += "                rml:referenceFormulation ql:CSV\n" 
-                    mapping += "            ];\n"
-                    mapping += "    rr:subjectMap [\n"
-                    mapping += "        rr:template \"" + triples_map.subject_map.value + "\";\n"
-                    mapping += "    ].\n\n"
+        for tm in mapping_group:
+            if tm in parent_child:
+                for child in parent_child[tm]:
+                    for triples_map in triples_map_list:
+                        if triples_map.triples_map_id not in child_triples_maps and triples_map.triples_map_id not in mapping_group and child == triples_map.triples_map_id:
+                            mapping += "<" + triples_map.triples_map_id + ">\n"
+                            mapping += "    a rr:TriplesMap;\n"
+                            mapping += "    rml:logicalSource [ rml:source \"" + triples_map.data_source +"\";\n"
+                            mapping += "                rml:referenceFormulation ql:CSV\n" 
+                            mapping += "            ];\n"
+                            mapping += "    rr:subjectMap [\n"
+                            mapping += "        rr:template \"" + triples_map.subject_map.value + "\";\n"
+                            mapping += "    ];\n\n"
+                            for predicate_object in triples_map.predicate_object_maps_list:
+                                if "parent triples map" in predicate_object.object_map.mapping_type:
+                                    if predicate_object.object_map.value in mapping_group:
+                                        mapping += "    rr:predicateObjectMap [\n"
+                                        prefix, url, value = prefix_extraction(original, predicate_object.predicate_map.value)
+                                        mapping += "        rr:predicate " + prefix + ":" + value + ";\n"
+                                        mapping += "        rr:objectMap [\n"
+                                        mapping += "        rr:parentTriplesMap <" + predicate_object.object_map.value + ">;\n"
+                                        for i in range(len(predicate_object.object_map.child)):
+                                            mapping += "        rr:joinCondition [\n"
+                                            mapping += "            rr:child \"" + predicate_object.object_map.child[i] + "\";\n"
+                                            mapping += "            rr:parent \"" + predicate_object.object_map.parent[i] + "\";\n"
+                                            mapping += "        ];\n"
+                                        mapping += "        ];\n"
+                                        mapping += "    ];\n"
+                            mapping = mapping[:-2]
+                            mapping += ".\n\n" 
+                            child_triples_maps[triples_map.triples_map_id] = ""
 
         prefix_string = ""
         
@@ -159,8 +203,10 @@ def prefix_extraction(original, uri):
         original_mapping = f.readlines()
         for prefix in original_mapping:
             if ("prefix" in prefix) or ("base" in prefix):
-               elements = prefix.split(" ")
-               prefixes[elements[2][1:-3]] = elements[1][:-1]
+                elements = prefix.split(" ")
+                elements[2] = elements[2].replace(" ","")
+                elements[2] = elements[2].replace("\n","")
+                prefixes[elements[2].replace(" ","")[1:-1]] = elements[1][:-1]
             else:
                 break
         f.close()
