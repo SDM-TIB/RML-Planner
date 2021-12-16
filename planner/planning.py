@@ -234,8 +234,19 @@ def mapping_parser(mapping_file):
 
 	return triples_map_list
 
-def planning(config_path):
+def print_tree(tree):
+	print("Node: " + tree.name)
+	if tree.left != None:
+		print("Left: " + tree.left.name)
+	if tree.right != None:
+		print("Right: " + tree.right.name)
+	if tree.left != None:
+		print_tree(tree.left)
+	if tree.right != None:
+		print_tree(tree.right)
 
+def planning(config_path):
+	partitions = {}
 	if os.path.isfile(config_path) == False:
 		print("The configuration file " + config_path + " does not exist.")
 		print("Aborting...")
@@ -255,10 +266,16 @@ def planning(config_path):
 
 		triples_map_list = mapping_parser(config[dataset_i]["mapping"])
 		groups_mapping = grouping_mappings(triples_map_list)
-		parent_child = join_grouping(triples_map_list)
 		i = 0
 		for group_mapping in groups_mapping:
-			update_mapping(config[dataset_i]["mapping"],config["datasets"]["output_folder"],i,groups_mapping[group_mapping], parent_child,triples_map_list)
+			partitions[config[dataset_i]["mapping"].split("/")[len(config[dataset_i]["mapping"].split("/"))-1].split(".")[0] + "_submap_"+ str(i) +".ttl"] = update_mapping(config[dataset_i]["mapping"],config["datasets"]["output_folder"],i,groups_mapping[group_mapping],triples_map_list)
 			i += 1 
+
+		execute_partitions(config["datasets"]["engine"],partitions_clasification(neighborhood_table(partitions)), config["datasets"]["output_folder"],config[dataset_i]["name"])
+		os.system("rm " + config["datasets"]["output_folder"] + "/*submap*.nt")
+		if "RMLMapper" != config["datasets"]["engine"]:
+			os.system("rm " + config["datasets"]["output_folder"] + "/configfile*.*")
+			if "SDM-RDFizer" == config["datasets"]["engine"]:
+				os.system("rm " + config["datasets"]["output_folder"] + "/*.csv")
 
 		print("Successfully semantified {}.\n".format(config[dataset_i]["name"]))
