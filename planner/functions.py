@@ -2,7 +2,10 @@ import re
 import csv
 import sys
 import os
-from .tree import Node as tree
+try:
+    from tree import Node as tree
+except:
+    from .tree import Node as tree
 import subprocess
 
 global prefixes
@@ -69,11 +72,11 @@ def execute_partitions(engine, clasified_partitions, output, output_name):
         command = ""
         i = 1
         for partitions in clasified_partitions["cat"]:
-            command += "timeout 5h python3.7 -m morph_kgc " + config_writer(engine, output, partitions) + " & "
+            command += "timeout 5h python3 -m morph_kgc " + config_writer(engine, output, partitions) + " & "
             wait += "%" + str(i) + " "
             i += 1
         for partitions in clasified_partitions["sort"]:
-            command += "timeout 5h python3.7 -m morph_kgc " + config_writer(engine, output, partitions) + " & "
+            command += "timeout 5h python3 -m morph_kgc " + config_writer(engine, output, partitions) + " & "
             wait += "%" + str(i) + " "
             i += 1
         command = command + wait
@@ -105,11 +108,11 @@ def execute_partitions(engine, clasified_partitions, output, output_name):
         i = 1
         if "SDM-RDFizer" == engine:
             for partitions in clasified_partitions["cat"]:
-                command += "timeout 5h python3 ../www/rdfizer/rdfizer/run_rdfizer.py " + config_writer(engine, output, partitions) + " & "
+                command += "timeout 5h python3 -m rdfizer -c " + config_writer(engine, output, partitions) + " & "
                 wait += "%" + str(i) + " "
                 i += 1
             for partitions in clasified_partitions["sort"]:
-                command += "timeout 5h python3 ../www/rdfizer/rdfizer/run_rdfizer.py " + config_writer(engine, output, partitions) + " & "
+                command += "timeout 5h python3 -m rdfizer -c " + config_writer(engine, output, partitions) + " & "
                 wait += "%" + str(i) + " "
                 i += 1
         elif "RMLMapper" == engine:

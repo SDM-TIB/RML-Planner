@@ -3,13 +3,20 @@ import re
 import csv
 import sys
 import rdflib
+import time
 from rdflib.plugins.sparql import prepareQuery
 from configparser import ConfigParser, ExtendedInterpolation
-from .functions import *
+try:
+	from functions import *
+except:
+	from .functions import *
 try:
 	from triples_map import TriplesMap as tm
 except:
 	from .triples_map import TriplesMap as tm
+
+global start_time
+start_time = 0
 
 def mapping_parser(mapping_file):
 
@@ -258,6 +265,7 @@ def planning(config_path):
 	if not os.path.exists(config["datasets"]["output_folder"]):
 		os.mkdir(config["datasets"]["output_folder"])
 
+	start_time = time.time()
 	for dataset_number in range(int(config["datasets"]["number_of_datasets"])):
 		dataset_i = "dataset" + str(int(dataset_number) + 1)
 		triples_map_list = mapping_parser(config[dataset_i]["mapping"])
@@ -279,3 +287,7 @@ def planning(config_path):
 				os.system("rm " + config["datasets"]["output_folder"] + "/*.csv")
 
 		print("Successfully semantified {}.\n".format(config[dataset_i]["name"]))
+
+	duration = time.time() - start_time
+	os.system("rm " + config["datasets"]["output_folder"] + "/*submap*.ttl")
+	print("Successfully semantified all datasets in {:.3f} seconds.".format(duration))
